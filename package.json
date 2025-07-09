@@ -1,14 +1,17 @@
 {
   "name": "patrickcarmo-mcp-server",
   "version": "1.0.0",
-  "description": "A simple MCP server that provides friendly greetings with dynamic data",
+  "description": "A simple MCP server that provides friendly greetings and fetches Tabnews articles",
   "main": "index.js",
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "start": "node index.js",
     "test": "node test-client.js"
   },
-  "keywords": ["mcp", "server", "greeting"],
+  "keywords": ["mcp", "server", "greeting", "tabnews", "articles"],
   "author": "Patrick Carmo",
   "license": "ISC",
   "dependencies": {

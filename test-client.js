@@ -105,8 +105,27 @@ async function testMCPServer() {
   
   server.stdin.write(JSON.stringify(greetingRequest2) + '\n');
   
-  // Wait for final response
+  // Wait for response
   await new Promise(resolve => setTimeout(resolve, 500));
+  
+  // Test 6: Call the Tabnews articles tool
+  console.log('📰 Step 6: Call Tabnews articles tool...');
+  const tabnewsRequest = {
+    jsonrpc: '2.0',
+    id: 5,
+    method: 'tools/call',
+    params: {
+      name: 'get_tabnews_articles',
+      arguments: {
+        limit: 3
+      }
+    }
+  };
+  
+  server.stdin.write(JSON.stringify(tabnewsRequest) + '\n');
+  
+  // Wait for final response
+  await new Promise(resolve => setTimeout(resolve, 2000));
   
   // Close the server
   server.kill('SIGTERM');

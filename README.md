@@ -1,6 +1,6 @@
 # PatrickCarmo MCP Server
 
-A simple and friendly Model Context Protocol (MCP) server that provides warm greetings with dynamic data including current date, time, and fun facts.
+A simple and friendly Model Context Protocol (MCP) server that provides warm greetings with dynamic data and fetches the latest articles from Tabnews.
 
 ## Features
 
@@ -8,7 +8,8 @@ A simple and friendly Model Context Protocol (MCP) server that provides warm gre
 - 📅 **Dynamic Date/Time**: Shows current date and time in a human-readable format
 - ✨ **Fun Facts**: Includes random interesting facts to brighten your day
 - 👋 **Personalization**: Optional name parameter for customized greetings
-- 🚀 **Easy to Use**: Simple single-tool MCP server
+- 📰 **Tabnews Integration**: Fetch latest articles from Tabnews with titles, URLs, and metadata
+- 🚀 **Easy to Use**: Simple multi-tool MCP server
 
 ## Installation
 
@@ -17,14 +18,14 @@ A simple and friendly Model Context Protocol (MCP) server that provides warm gre
    npm install
    ```
 
-2. **Make the server executable** (optional):
+2. **Test the server**:
    ```bash
-   chmod +x index.js
+   npm test
    ```
 
 ## Usage
 
-### Running the Server
+### Running the Server Manually
 
 ```bash
 node index.js
@@ -55,7 +56,51 @@ Generates a warm, friendly greeting with current date, time, and a fun fact.
 }
 ```
 
+#### `get_tabnews_articles`
+
+Fetches the latest articles from Tabnews with titles, URLs, authors, and metadata.
+
+**Parameters:**
+- `limit` (optional, number): Maximum number of articles to fetch (default: 10, max: 30)
+
+**Example Usage:**
+
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "get_tabnews_articles",
+    "arguments": {
+      "limit": 5
+    }
+  }
+}
+```
+
 **Sample Output:**
+```
+📰 Latest 3 articles from Tabnews:
+
+1. **How my team made 100 deployments to production on a Friday**
+   📍 URL: https://www.tabnews.com.br/ChristoPy/how-my-team-made-100-deployments-to-production-on-friday
+   👤 Author: ChristoPy
+   📅 Published: Jul 8, 2025
+   💰 Tabcoins: 17
+   💬 Comments: 9
+   🔗 Source: https://x.com/ChristoPy_/status/1941223288459624534
+
+2. **🚀 After 10 years I (almost) became a dev and launched my MVP: Group Finder**
+   📍 URL: https://www.tabnews.com.br/LeonardoSartor/after-10-years-almost-became-dev-and-launched-my-mvp-group-finder
+   👤 Author: LeonardoSartor
+   📅 Published: Jul 7, 2025
+   💰 Tabcoins: 6
+   💬 Comments: 0
+
+---
+Fetched from Tabnews API at 7/9/2025, 11:53:08 AM
+```
+
+**Sample Output (Friendly Greeting):**
 ```
 Good morning, Alice! 👋
 
@@ -142,12 +187,47 @@ The server includes a curated collection of interesting fun facts:
 - Nature facts 🍯🍌
 - Science facts 🤧
 
+## Troubleshooting
+
+### Common Issues
+
+#### 1. Timeout Errors
+If you see timeout errors in the Claude logs:
+- Ensure you're using Node.js >= 18.0.0
+- Check that the path in your configuration is correct
+- Test the server locally with `npm test`
+
+#### 2. Node.js Version Problems
+If Claude is using an older Node.js version:
+- Specify the full path to Node.js in your configuration
+- Example: `"/Users/yourname/.nvm/versions/node/v18.20.4/bin/node"`
+
+#### 3. Server Not Found
+If Claude can't find the server:
+- Verify the project path is correct in your configuration
+- Make sure the `index.js` file exists and is executable
+- Check that dependencies are installed with `npm install`
+
+#### 4. Connection Issues
+If the server disconnects frequently:
+- Restart Claude Desktop completely
+- Check the logs at `~/Library/Logs/Claude/mcp-server-patrickcarmo-mcp-server.log`
+- Ensure no other process is using the same server name
+
+### Logs Location
+
+Server logs can be found at:
+- **macOS**: `~/Library/Logs/Claude/mcp-server-patrickcarmo-mcp-server.log`
+- **Windows**: `%APPDATA%\Claude\Logs\mcp-server-patrickcarmo-mcp-server.log`
+- **Linux**: `~/.config/Claude/logs/mcp-server-patrickcarmo-mcp-server.log`
+
 ## Error Handling
 
 The server includes comprehensive error handling:
 - Graceful shutdown on SIGINT/SIGTERM
 - Error responses for invalid tool calls
 - Detailed error messages for debugging
+- Timeout protection for initialization
 
 ## Contributing
 
