@@ -1,20 +1,25 @@
 {
   "name": "patrickcarmo-mcp-server",
   "version": "1.0.0",
-  "description": "A simple MCP server that provides friendly greetings and fetches Tabnews articles",
+  "description": "A simple MCP server that provides friendly greetings and fetches Tabnews articles with STDIO and HTTP transport support",
   "main": "index.js",
   "type": "module",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=16.0.0"
   },
   "scripts": {
     "start": "node index.js",
+    "start:stdio": "node index.js --mode=stdio",
+    "start:http": "node index.js --mode=http --port=3000",
+    "start:http:dev": "node index.js --mode=http --port=8080",
     "test": "node test-client.js"
   },
-  "keywords": ["mcp", "server", "greeting", "tabnews", "articles"],
+  "keywords": ["mcp", "server", "greeting", "tabnews", "articles", "http", "stdio"],
   "author": "Patrick Carmo",
   "license": "ISC",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0"
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "express": "^4.18.2",
+    "node-fetch": "^3.3.2"
   }
 }

@@ -2,11 +2,15 @@
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  isInitializeRequest,
 } from "@modelcontextprotocol/sdk/types.js";
 import https from "https";
+import express from "express";
+import { randomUUID } from "node:crypto";
 
 /**
  * Create a friendly greeting with dynamic data
@@ -293,9 +297,9 @@ async function createServer() {
 }
 
 /**
- * Main function to start the server
+ * Start STDIO server (current mode)
  */
-async function main() {
+async function startStdioServer() {
   try {
     const server = await createServer();
     const transport = new StdioServerTransport();
@@ -308,7 +312,7 @@ async function main() {
     await server.connect(transport);
     
     // Log to stderr so it doesn't interfere with the MCP protocol
-    console.error("🚀 PatrickCarmo MCP Server is running!");
+    console.error("🚀 PatrickCarmo MCP Server (STDIO) is running!");
     console.error("📋 Available tools:");
     console.error("  - friendly_greeting: Generate a warm greeting with current date/time");
     console.error("  - get_tabnews_articles: Fetch latest articles from Tabnews with titles and URLs");
@@ -321,8 +325,138 @@ async function main() {
     });
     
   } catch (error) {
-    console.error("❌ Failed to start server:", error);
+    console.error("❌ Failed to start STDIO server:", error);
     process.exit(1);
+  }
+}
+
+/**
+ * Start HTTP server (new mode)
+ */
+async function startHTTPServer(port = 3000) {
+  const app = express();
+  app.use(express.json());
+
+  // Enable CORS for browser-based clients
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, mcp-session-id');
+    res.header('Access-Control-Expose-Headers', 'mcp-session-id');
+    
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(200);
+      return;
+    }
+    next();
+  });
+
+  // Map to store transports by session ID
+  const transports = {};
+
+  // Handle POST requests for client-to-server communication
+  app.post('/mcp', async (req, res) => {
+    const sessionId = req.headers['mcp-session-id'];
+    let transport;
+
+    if (sessionId && transports[sessionId]) {
+      // Reuse existing transport
+      transport = transports[sessionId];
+    } else if (!sessionId && isInitializeRequest(req.body)) {
+      // New initialization request
+      const newSessionId = randomUUID();
+      transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => newSessionId,
+        onsessioninitialized: (sessionId) => {
+          transports[sessionId] = transport;
+        },
+      });
+
+      // Clean up transport when closed
+      transport.onclose = () => {
+        if (transport.sessionId) {
+          delete transports[transport.sessionId];
+        }
+      };
+
+      const server = await createServer();
+      await server.connect(transport);
+      
+      // Ensure session ID is set in response headers
+      res.setHeader('mcp-session-id', newSessionId);
+    } else {
+      res.status(400).json({
+        jsonrpc: '2.0',
+        error: {
+          code: -32000,
+          message: 'Bad Request: No valid session ID provided',
+        },
+        id: null,
+      });
+      return;
+    }
+
+    await transport.handleRequest(req, res, req.body);
+  });
+
+  // Handle GET requests for server-to-client notifications via SSE
+  app.get('/mcp', async (req, res) => {
+    const sessionId = req.headers['mcp-session-id'];
+    if (!sessionId || !transports[sessionId]) {
+      res.status(400).send('Invalid or missing session ID');
+      return;
+    }
+    
+    const transport = transports[sessionId];
+    await transport.handleRequest(req, res);
+  });
+
+  // Handle DELETE requests for session termination
+  app.delete('/mcp', async (req, res) => {
+    const sessionId = req.headers['mcp-session-id'];
+    if (!sessionId || !transports[sessionId]) {
+      res.status(400).send('Invalid or missing session ID');
+      return;
+    }
+    
+    const transport = transports[sessionId];
+    await transport.handleRequest(req, res);
+  });
+
+  // Health check endpoint
+  app.get('/health', (req, res) => {
+    res.json({
+      status: 'OK',
+      service: 'PatrickCarmo MCP Server',
+      version: '1.0.0',
+      timestamp: new Date().toISOString(),
+      available_tools: ['friendly_greeting', 'get_tabnews_articles']
+    });
+  });
+
+  app.listen(port, () => {
+    console.log(`🌐 PatrickCarmo MCP Server (HTTP) running on port ${port}`);
+    console.log(`📡 MCP Endpoint: http://localhost:${port}/mcp`);
+    console.log(`🔍 Health Check: http://localhost:${port}/health`);
+    console.log("📋 Available tools:");
+    console.log("  - friendly_greeting: Generate a warm greeting with current date/time");
+    console.log("  - get_tabnews_articles: Fetch latest articles from Tabnews with titles and URLs");
+    console.log("💡 Usage: Connect MCP clients to the /mcp endpoint");
+  });
+}
+
+/**
+ * Main function - decide which transport to use
+ */
+async function main() {
+  const args = process.argv.slice(2);
+  const mode = args.find(arg => arg.startsWith('--mode='))?.split('=')[1] || 'stdio';
+  const port = parseInt(args.find(arg => arg.startsWith('--port='))?.split('=')[1] || '3000');
+
+  if (mode === 'http') {
+    await startHTTPServer(port);
+  } else {
+    await startStdioServer();
   }
 }
 
